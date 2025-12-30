@@ -1,7 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class ForgotPasswordScreen extends StatelessWidget {
+class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
+
+  @override
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+}
+
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  final _matricController = TextEditingController();
+  bool _isLoading = false;
+
+  Future<void> _sendResetLink() async {
+    final supabase = Supabase.instance.client;
+    final matric = _matricController.text.trim();
+
+    if (matric.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter your matric number")),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await supabase
+          .from('users')
+          .select('email')
+          .eq('matric_number', matric)
+          .single();
+
+      final email = response['email'] as String;
+
+      await supabase.auth.resetPasswordForEmail(email);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Reset link sent. Please check your email."),
+        ),
+      );
+
+      await Future.delayed(const Duration(seconds: 2));
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Matric number not found"),
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,13 +85,20 @@ class ForgotPasswordScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.lock_reset, size: 80, color: Colors.white),
+                  const Icon(Icons.lock_reset,
+                    size: 80, color: Colors.white),
                   const SizedBox(height: 20),
+
                   const Text(
                     "Forgot Password?",
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(height: 10),
+
                   const Text(
                     "Enter your student email and we'll send you a link to reset your password.",
                     textAlign: TextAlign.center,
@@ -47,12 +106,15 @@ class ForgotPasswordScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 40),
 
+                  // MATRIC NUMBER INPUT
                   TextField(
+                    controller: _matricController,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: "Student Email",
+                      hintText: "Matric Number",
                       hintStyle: const TextStyle(color: Colors.white60),
-                      prefixIcon: const Icon(Icons.email_outlined, color: Colors.white),
+                      prefixIcon: const Icon(Icons.badge,
+                        color: Colors.white),
                       filled: true,
                       fillColor: Colors.white.withOpacity(0.2),
                       border: OutlineInputBorder(
@@ -69,20 +131,22 @@ class ForgotPasswordScreen extends StatelessWidget {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
                       ),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Reset link sent to your email!")),
-                        );
-                        Future.delayed(const Duration(seconds: 2), () {
-                          Navigator.pop(context);
-                        });
-                      },
-                      child: const Text(
-                        "SEND RESET LINK", 
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)
-                      ),
+                      onPressed: _isLoading ? null : _sendResetLink,
+                      child: _isLoading
+                        ? const CircularProgressIndicator(
+                          color: Colors.white)
+                        : const Text(
+                            "Send Reset Link",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                     ),
                   ),
                 ],
