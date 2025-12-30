@@ -48,8 +48,51 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _matricController = TextEditingController();
+  final _passwordController = TextEditingController();
+
   bool _isObscured = true;
   bool _rememberMe = false;
+  bool _isLoading = false;
+
+  Future<void> _login() async {
+    final supabase = Supabase.instance.client;
+
+    final matric = _matricController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (matric.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter matric number and password")),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await supabase
+          .from('users')
+          .select('email')
+          .eq('matric_number', matric)
+          .single();
+
+      final email = response['email'] as String;
+
+      await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      Navigator.pushReplacementNamed(context, '/home');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Invalid matric number or password")),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,8 +135,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 40),
 
-                  // USERNAME
+                  // MATRIC NUMBER
                   TextField(
+                    controller: _matricController,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       hintText: "Matric Number",
@@ -108,6 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   // PASSWORD
                   TextField(
+                    controller: _passwordController,
                     obscureText: _isObscured,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
@@ -115,8 +160,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintStyle: const TextStyle(color: Colors.white60),
                       prefixIcon: const Icon(Icons.lock_outline, color: Colors.white),
                       suffixIcon: IconButton(
-                        icon: Icon(_isObscured ? Icons.visibility_off : Icons.visibility, color: Colors.white70),
-                        onPressed: () => setState(() => _isObscured = !_isObscured),
+                        icon: Icon(
+                          _isObscured
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                          color: Colors.white70
+                        ),
+                        onPressed: () =>
+                          setState(() => _isObscured = !_isObscured),
                       ),
                       filled: true,
                       fillColor: Colors.white.withOpacity(0.2),
@@ -165,10 +216,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         backgroundColor: Colors.blue,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                       ),
-                      onPressed: () {
-                        Navigator.pushReplacementNamed(context, '/home');
-                      },
-                      child: const Text("SIGN IN", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                      onPressed: _isLoading ? null : _login,
+                      child: _isLoading
+                        ? const CircularProgressIndicator(
+                          color: Colors.white)
+                        : const Text(
+                            "LOGIN",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -177,7 +235,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Don't have an account? ", style: TextStyle(color: Colors.white70)),
+                      const Text("Don't have an account? ",
+                        style: TextStyle(color: Colors.white70)),
                       GestureDetector(
                         onTap: () {
                           // Navigate to Sign Up Screen
