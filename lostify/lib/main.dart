@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'home_screen.dart';
 import 'signup_screen.dart'; 
 import 'forgot_password_screen.dart'; 
+import 'reset_password_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: 'https://xtuazsuytftznwarvnoi.supabase.co',
+    anonKey: 'sb_publishable_MWNR99pu1E9C08dCMsG_cw_a2hs7Zub',
+  );
+
   runApp(const LostifyApp());
 }
 
@@ -24,6 +34,7 @@ class LostifyApp extends StatelessWidget {
         '/home': (context) => const HomeScreen(),
         '/signup': (context) => const SignupScreen(),
         '/forgot_password': (context) => const ForgotPasswordScreen(),
+        '/reset-password': (context) => const ResetPasswordScreen(),
       },
     );
   }
