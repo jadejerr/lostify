@@ -1,16 +1,80 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'activity_history_screen.dart'; 
 import 'help_support_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final supabase = Supabase.instance.client;
+
+  Map<String, dynamic>? _profile;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfile();
+  }
+
+  Future<void> _fetchProfile() async {
+    try {
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        throw Exception("User not authenticated");
+      }
+
+      final response = await supabase
+          .from('users')
+          .select()
+          .eq('user_id', user.id)
+          .single();
+
+      setState(() {
+        _profile = response;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to load profile")),
+      );
+    }
+  }
+
+  Future<void> _logout() async {
+    await supabase.auth.signOut();
+    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final fullName = _profile?['full_name'] ?? '—';
+    final email = _profile?['email'] ?? '—';
+    final matric = _profile?['matric_number'] ?? '—';
+    final role = _profile?['role'] ?? 'student';
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text("My Profile", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: const Text(
+          "My Profile",
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          ),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -22,18 +86,29 @@ class ProfileScreen extends StatelessWidget {
             const SizedBox(height: 20),
             
             // 1. PROFILE HEADER
-            const CircleAvatar(
+            CircleAvatar(
               radius: 50,
-              backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=5'),
+              backgroundImage: !_isLoading && matric != null
+                ? NetworkImage(
+                  'https://studentphotos.unimas.my/$matric.jpg',
+                  )
+                : null,
+                child: _isLoading || matric == null
+                    ? const Icon(Icons.person, color: Colors.grey)
+                    : null,
             ),
             const SizedBox(height: 15),
-            const Text(
-              "Durrani Ammar",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+
+            Text(
+              fullName,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            const Text(
-              "durrani@student.unimas.my",
-              style: TextStyle(color: Colors.grey),
+            Text(
+              email,
+              style: const TextStyle(color: Colors.grey),
             ),
             
             const SizedBox(height: 30),
@@ -55,21 +130,53 @@ class ProfileScreen extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("Student ID", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                      Text("97372", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 10),
-                      Text("Faculty", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                      Text("FCSIT", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      const Text(
+                        "Matric Number",
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        matric,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        "Role",
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        role.toString().toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.qr_code_2, size: 50, color: Colors.black),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.qr_code_2,
+                      size: 50,
+                      color: Colors.black,
+                    ),
                   )
                 ],
               ),
@@ -112,9 +219,7 @@ class ProfileScreen extends StatelessWidget {
 
             // 4. LOGOUT BUTTON
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-              },
+              onPressed: _logout,
               child: const Text("Log Out", style: TextStyle(color: Colors.red, fontSize: 16)),
             ),
             const SizedBox(height: 20),

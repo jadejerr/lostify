@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'report_screen.dart';
 import 'search_screen.dart';
 import 'notification_screen.dart';
@@ -56,8 +58,51 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class HomeTab extends StatelessWidget {
+class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
+
+  @override
+  State<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<HomeTab> {
+  final supabase = Supabase.instance.client;
+
+  String? _fullName;
+  String? _matricNumber;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserName();
+  }
+
+  Future<void> _fetchUserName() async {
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) throw Exception("Not authenticated");
+
+      final response = await supabase
+          .from('users')
+          .select('full_name, matric_number')
+          .eq('user_id', user.id)
+          .single();
+
+      setState(() {
+        _fullName = response['full_name'] as String;
+        _matricNumber = response['matric_number'] as String;
+        _isLoading = false;
+      });
+
+    } catch (_) {
+      setState(() {
+        _fullName = 'User';
+        _isLoading = false;
+      });
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -88,10 +133,17 @@ class HomeTab extends StatelessWidget {
 
             Row(
               children: [
-                const CircleAvatar(
-                  radius: 30,
-                  backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=5'),
-                ),
+              CircleAvatar(
+                radius: 30,
+                backgroundImage: !_isLoading && _matricNumber != null
+                    ? NetworkImage(
+                        'https://studentphotos.unimas.my/$_matricNumber.jpg',
+                      )
+                    : null,
+                child: _isLoading || _matricNumber == null
+                    ? const Icon(Icons.person, color: Colors.grey)
+                    : null,
+              ),
                 const SizedBox(width: 15),
                 Expanded(
                   child: Container(
@@ -105,7 +157,10 @@ class HomeTab extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("Welcome Durrani", style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          _isLoading ? "Welcome…" : "Welcome $_fullName",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           globalReports.isEmpty 
