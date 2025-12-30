@@ -100,7 +100,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   const SizedBox(height: 10),
 
                   const Text(
-                    "Enter your student email and we'll send you a link to reset your password.",
+                    "Enter your matric number and we'll send you a link to reset your password.",
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white70),
                   ),

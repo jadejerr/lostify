@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:async';
 
 import 'home_screen.dart';
 import 'signup_screen.dart'; 
 import 'forgot_password_screen.dart'; 
 import 'reset_password_screen.dart';
+
+final GlobalKey<NavigatorState> navigatorKey =
+    GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,12 +21,47 @@ void main() async {
   runApp(const LostifyApp());
 }
 
-class LostifyApp extends StatelessWidget {
+class LostifyApp extends StatefulWidget {
   const LostifyApp({super.key});
+
+  @override
+  State<LostifyApp> createState() => _LostifyAppState();
+}
+
+class _LostifyAppState extends State<LostifyApp> {
+  final supabase = Supabase.instance.client;
+  StreamSubscription<AuthState>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _authSubscription =
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final event = data.event;
+
+      if (event == AuthChangeEvent.passwordRecovery) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          navigatorKey.currentState
+              ?.pushNamedAndRemoveUntil(
+            '/reset-password',
+            (route) => false,
+          );
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Lostify',
       theme: ThemeData(
@@ -39,6 +78,7 @@ class LostifyApp extends StatelessWidget {
     );
   }
 }
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
