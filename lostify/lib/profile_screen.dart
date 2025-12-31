@@ -51,8 +51,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _logout() async {
-    await supabase.auth.signOut();
-    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    await Supabase.instance.client.auth.signOut();
+    await Future.delayed(const Duration(milliseconds: 300));
+    Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
   }
 
   @override

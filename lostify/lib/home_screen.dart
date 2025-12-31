@@ -19,11 +19,15 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
   List<Widget> get _screens => [
-    const HomeTab(),
-    const SearchScreen(),
-    const ReportScreen(),
-    const NotificationScreen(), 
-    const ProfileScreen(),
+    HomeTab(),
+    SearchScreen(),
+    ReportScreen(
+    key: ValueKey(
+      Supabase.instance.client.auth.currentUser?.id,
+    ),
+  ),
+    NotificationScreen(), 
+    ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -35,9 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: _screens.elementAt(_selectedIndex),
-      ),
+      body: SafeArea(child: _screens[_selectedIndex]),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -70,173 +72,219 @@ class _HomeTabState extends State<HomeTab> {
 
   String? _fullName;
   String? _matricNumber;
-  bool _isLoading = true;
+
+  bool _isLoadingUser = true;
+  bool _isLoadingReports = true;
+
+  List<Map<String, dynamic>> _reports = [];  
 
   @override
   void initState() {
     super.initState();
-    _fetchUserName();
+    _fetchUser();
+    _fetchReports(); 
   }
 
-  Future<void> _fetchUserName() async {
+  // USER
+  Future<void> _fetchUser() async {
     try {
       final user = supabase.auth.currentUser;
       if (user == null) throw Exception("Not authenticated");
 
-      final response = await supabase
+      final res = await supabase
           .from('users')
           .select('full_name, matric_number')
           .eq('user_id', user.id)
           .single();
 
       setState(() {
-        _fullName = response['full_name'] as String;
-        _matricNumber = response['matric_number'] as String;
-        _isLoading = false;
+        _fullName = res['full_name'];
+        _matricNumber = res['matric_number'];
+        _isLoadingUser = false;
       });
 
     } catch (_) {
       setState(() {
         _fullName = 'User';
-        _isLoading = false;
+        _isLoadingUser = false;
       });
     }
   }
 
+  // REPORTS
+  Future<void> _fetchReports() async {
+    try {
+      final res = await supabase
+          .from('reports')
+          .select()
+          .eq('status', 'active')
+          .order('created_at', ascending: false);
+
+      setState(() {
+        _reports = List<Map<String, dynamic>>.from(res);
+        _isLoadingReports = false;
+      });
+    } catch (_) {
+      setState(() => _isLoadingReports = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const SizedBox(width: 40), 
-                const Text("Lostify", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                IconButton(
-                  icon: const Icon(Icons.smart_toy_outlined, color: Colors.blue),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ChatScreen()),
-                    );
-                  },
-                )
-              ],
-            ),
-            
+            _buildTopBar(context),
             const SizedBox(height: 10),
-
-            Row(
-              children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundImage: !_isLoading && _matricNumber != null
-                    ? NetworkImage(
-                        'https://studentphotos.unimas.my/$_matricNumber.jpg',
-                      )
-                    : null,
-                child: _isLoading || _matricNumber == null
-                    ? const Icon(Icons.person, color: Colors.grey)
-                    : null,
-              ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: Colors.grey.shade200),
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [BoxShadow(color: Colors.grey.shade100, blurRadius: 5)],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _isLoading ? "Welcome…" : "Welcome $_fullName",
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          globalReports.isEmpty 
-                            ? "No reports submitted yet." 
-                            : "${globalReports.length} reports currently active.",
-                          style: const TextStyle(fontWeight: FontWeight.bold)
-                        ),
-                        const Text("Stay safe!", style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      ],
-                    ),
-                  ),
-                )
-              ],
-            ),
+            _buildHeader(),
             const SizedBox(height: 20),
-            
-            const Text("Your Report Activity", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text("Your Report Activity",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
-            
-            globalReports.isEmpty
-            ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    children: [
-                      Icon(Icons.history_toggle_off, size: 40, color: Colors.grey.shade300),
-                      const SizedBox(height: 10),
-                      const Text("No recent activity", style: TextStyle(color: Colors.grey)),
-                    ],
-                  ),
-                ),
-              )
-            : ListView.builder(
-                shrinkWrap: true, 
-                physics: const NeverScrollableScrollPhysics(), 
-                itemCount: globalReports.length,
-                itemBuilder: (context, index) {
-                  final item = globalReports[index];
-                  return _buildReportCard(item);
-                },
-              ),
+            _buildReportList(),
           ],
         ),
-      ),
+      );
+  }
+
+  Widget _buildTopBar(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const SizedBox(width: 40),
+        const Text(
+          "Lostify",
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        IconButton(
+          icon: const Icon(Icons.smart_toy_outlined, color: Colors.blue),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ChatScreen()),
+            );
+          },
+        ),
+      ],
+    );
+  }
+     
+  Widget _buildHeader() {
+      return Row(
+        children: [
+          CircleAvatar(
+            radius: 30,
+            backgroundImage: !_isLoadingUser && _matricNumber != null
+                ? NetworkImage(
+                    'https://studentphotos.unimas.my/$_matricNumber.jpg')
+                : null,
+            child: _isLoadingUser || _matricNumber == null
+                ? const Icon(Icons.person, color: Colors.grey)
+                : null,
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _isLoadingUser ? "Welcome…" : "Welcome $_fullName",
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _reports.isEmpty
+                        ? "No reports submitted yet."
+                        : "${_reports.length} reports currently active.",
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const Text("Stay safe!",
+                      style: TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            ),
+          )
+        ],
+      );
+    }
+
+  Widget _buildReportList() {
+    if (_isLoadingReports) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_reports.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Icon(Icons.history_toggle_off,
+                size: 40, color: Colors.grey.shade300),
+            const SizedBox(height: 10),
+            const Text("No recent activity",
+                style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _reports.length,
+      itemBuilder: (context, index) {
+        final r = _reports[index];
+        return _buildReportCard(r);
+      },
     );
   }
 
-  Widget _buildReportCard(ReportItem item) {
+
+  Widget _buildReportCard(Map<String, dynamic> report) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: Container(
-          width: 50, height: 50,
+          width: 50,
+          height: 50,
           decoration: BoxDecoration(
             color: Colors.grey.shade200,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: item.image != null
+          child: report['image_url'] != null
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.file(item.image!, fit: BoxFit.cover),
+                child: Image.network(report['image_url'], fit: BoxFit.cover),
               )
             : const Icon(Icons.image, color: Colors.grey),
         ),
-        title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w500)),
+        title: Text(report['title'],
+          style: const TextStyle(fontWeight: FontWeight.w500)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(item.desc, maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(report['description'] ?? '',
+              maxLines: 1, overflow: TextOverflow.ellipsis),
             Text(
-              item.status, 
+              report['report_type'] == 'lost'
+                ? "Reported Lost"
+                : "Reported Found",
               style: TextStyle(
-                color: item.status.contains("Lost") ? Colors.red : Colors.green, 
+                color: report['report_type'] == 'lost'
+                  ? Colors.red
+                  : Colors.green,
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
-              )
+              ),
             ),
           ],
         ),
