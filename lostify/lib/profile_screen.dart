@@ -86,7 +86,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             const SizedBox(height: 20),
             
-            // 1. PROFILE HEADER
+            // PROFILE HEADER
             CircleAvatar(
               radius: 50,
               backgroundImage: !_isLoading && matric != null
@@ -114,7 +114,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             
             const SizedBox(height: 30),
 
-            // 2. DIGITAL ID CARD
+            // DIGITAL ID CARD
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
               padding: const EdgeInsets.all(20),
@@ -185,7 +185,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 30),
 
-            // 3. MENU OPTIONS
+            // MENU OPTIONS
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
@@ -218,7 +218,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 30),
 
-            // 4. LOGOUT BUTTON
+            // LOGOUT BUTTON
             TextButton(
               onPressed: _logout,
               child: const Text("Log Out", style: TextStyle(color: Colors.red, fontSize: 16)),

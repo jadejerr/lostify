@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'report_data.dart';
 
-class ItemDetailsScreen extends StatelessWidget {
+class ItemDetailsScreen extends StatefulWidget {
   final ReportItem item;
 
   const ItemDetailsScreen({
@@ -10,8 +11,71 @@ class ItemDetailsScreen extends StatelessWidget {
   });
 
   @override
+  State<ItemDetailsScreen> createState() => _ItemDetailsScreenState();
+}
+
+class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
+  final supabase = Supabase.instance.client;
+
+  bool _isSubmitting = false;
+  bool _alreadyClaimed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfAlreadyClaimed();
+  }
+
+  // CHECK CLAIM STATUS
+  Future<void> _checkIfAlreadyClaimed() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final res = await supabase
+        .from('claims')
+        .select('id')
+        .eq('report_id', widget.item.id)
+        .eq('requester_id', user.id)
+        .maybeSingle();
+
+    if (res != null) {
+      setState(() => _alreadyClaimed = true);
+    }
+  }
+
+  // REQUEST CLAIM
+  Future<void> _requestClaim() async {
+    setState(() => _isSubmitting = true);
+
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) throw Exception("Not authenticated");
+
+      await supabase.from('claims').insert({
+        'report_id': widget.item.id,
+        'requester_id': user.id,
+        'status': 'pending',
+      });
+
+      setState(() => _alreadyClaimed = true);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Claim request submitted. Waiting for approval."),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to submit claim request")),
+      );
+    } finally {
+      setState(() => _isSubmitting = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final bool isLost = item.reportType == 'lost';
+    final bool isLost = widget.item.reportType == 'lost';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -40,11 +104,11 @@ class ItemDetailsScreen extends StatelessWidget {
                 color: Colors.grey.shade200,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: item.imageUrl != null
+              child: widget.item.imageUrl != null
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(20),
                       child: Image.network(
-                        item.imageUrl!,
+                        widget.item.imageUrl!,
                         fit: BoxFit.cover,
                       ),
                     )
@@ -55,7 +119,7 @@ class ItemDetailsScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // LOST / FOUND
+            // LOST / FOUND BADGE
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -77,15 +141,15 @@ class ItemDetailsScreen extends StatelessWidget {
 
             // TITLE & BRAND
             Text(
-              item.title,
+              widget.item.title,
               style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            if (item.brand != null && item.brand!.isNotEmpty)
+            if (widget.item.brand != null && widget.item.brand!.isNotEmpty)
               Text(
-                item.brand!,
+                widget.item.brand!,
                 style: const TextStyle(
                   fontSize: 18,
                   color: Colors.grey,
@@ -100,20 +164,48 @@ class ItemDetailsScreen extends StatelessWidget {
             _buildDetailRow(
               Icons.access_time,
               "Time",
-              item.timeDescription ?? "Not specified",
+              widget.item.timeDescription ?? "Not specified",
             ),
             const SizedBox(height: 20),
             _buildDetailRow(
               Icons.location_on,
               "Location",
-              item.location ?? "Not specified",
+              widget.item.location ?? "Not specified",
             ),
             const SizedBox(height: 20),
             _buildDetailRow(
               Icons.description,
               "Description",
-              item.description ?? "No description provided",
+              widget.item.description ?? "No description provided",
             ),
+
+            const SizedBox(height: 30),
+
+            // REQUEST CLAIM BUTTON
+            if (!isLost)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _alreadyClaimed || _isSubmitting
+                      ? null
+                      : _requestClaim,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: _alreadyClaimed
+                      ? const Text(
+                          "Claim Requested",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        )
+                      : _isSubmitting
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                              "Request Claim Item",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                ),
+              ),
           ],
         ),
       ),
