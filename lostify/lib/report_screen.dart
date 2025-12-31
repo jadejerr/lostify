@@ -247,7 +247,7 @@ class _ReportScreenState extends State<ReportScreen> {
     if (_myReports.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(20),
-        child: Center(child: Text("You have not submitted any reports yet.")),
+        child: Center(child: Text("No reports are made yet.")),
       );
     }
 

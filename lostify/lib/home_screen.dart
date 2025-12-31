@@ -225,14 +225,24 @@ class _HomeTabState extends State<HomeTab> {
     if (_reports.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Icon(Icons.history_toggle_off,
-                size: 40, color: Colors.grey.shade300),
-            const SizedBox(height: 10),
-            const Text("No recent activity",
-                style: TextStyle(color: Colors.grey)),
-          ],
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.history_toggle_off,
+                size: 40,
+                color: Colors.grey.shade300,
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                "No recent activity",
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
         ),
       );
     }
