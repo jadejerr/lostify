@@ -17,7 +17,8 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isObscured = true;
   bool _isLoading = false;
 
-  // REGISTRATION
+  // ---------------- REGISTER ----------------
+
   Future<void> _register() async {
     final supabase = Supabase.instance.client;
 
@@ -39,10 +40,13 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Create auth user
+      // 1️⃣ Create auth user
       final authResponse = await supabase.auth.signUp(
         email: email,
         password: password,
+        data: {
+          'full_name': fullName, // metadata
+        },
       );
 
       final user = authResponse.user;
@@ -50,12 +54,18 @@ class _SignupScreenState extends State<SignupScreen> {
         throw Exception("Registration failed. Try again.");
       }
 
-      // Insert profile row
+      // 2️⃣ Insert login mapping (matric → email)
       await supabase.from('users').insert({
         'user_id': user.id,
-        'full_name': fullName,
         'matric_number': matric,
         'email': email,
+        'full_name': fullName, // ← REQUIRED
+      });
+
+      // 3️⃣ Insert profile (FULL NAME LIVES HERE)
+      await supabase.from('profiles').upsert({
+        'id': user.id,
+        'full_name': fullName,
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -66,29 +76,37 @@ class _SignupScreenState extends State<SignupScreen> {
 
       Navigator.pop(context);
     } catch (e) {
+      debugPrint("SIGNUP ERROR: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text("Signup failed: $e")),
       );
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
+  // ---------------- UI ----------------
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
+          // BACKGROUND
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image: NetworkImage('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'),
+                image: NetworkImage(
+                  'https://images.unsplash.com/photo-1541339907198-e08756dedf3f',
+                ),
                 fit: BoxFit.cover,
-                colorFilter: ColorFilter.mode(Colors.black54, BlendMode.darken),
+                colorFilter:
+                    ColorFilter.mode(Colors.black54, BlendMode.darken),
               ),
             ),
           ),
 
+          // BACK BUTTON
           Positioned(
             top: 40,
             left: 20,
@@ -98,9 +116,10 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
           ),
 
+          // FORM
           Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(30.0),
+              padding: const EdgeInsets.all(30),
               child: Column(
                 children: [
                   const Text(
@@ -108,7 +127,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white
+                      color: Colors.white,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -146,22 +165,23 @@ class _SignupScreenState extends State<SignupScreen> {
                     decoration: InputDecoration(
                       hintText: "Password",
                       hintStyle: const TextStyle(color: Colors.white60),
-                      prefixIcon: const Icon(Icons.lock_outline,
-                        color: Colors.white),
+                      prefixIcon:
+                          const Icon(Icons.lock_outline, color: Colors.white),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _isObscured
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                          color: Colors.white70
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: Colors.white70,
                         ),
-                        onPressed: () => setState(() => _isObscured = !_isObscured),
+                        onPressed: () =>
+                            setState(() => _isObscured = !_isObscured),
                       ),
                       filled: true,
                       fillColor: Colors.white.withOpacity(0.2),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none
+                        borderSide: BorderSide.none,
                       ),
                     ),
                   ),
@@ -174,22 +194,22 @@ class _SignupScreenState extends State<SignupScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30)
+                          borderRadius: BorderRadius.circular(30),
                         ),
                       ),
                       onPressed: _isLoading ? null : _register,
                       child: _isLoading
-                        ? const CircularProgressIndicator(
-                            color: Colors.white,
-                          )
-                        : const Text(
-                            "Sign Up",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                          ? const CircularProgressIndicator(
                               color: Colors.white,
+                            )
+                          : const Text(
+                              "Sign Up",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
-                          ),
                     ),
                   ),
                 ],
@@ -200,6 +220,8 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
     );
   }
+
+  // ---------------- SHARED INPUT ----------------
 
   Widget _buildTextField({
     required TextEditingController controller,

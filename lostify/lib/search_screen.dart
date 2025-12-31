@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:image_picker/image_picker.dart'; 
-import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart'; 
+import 'package:image_picker/image_picker.dart';
+import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'item_details_screen.dart';
+import 'report_data.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -27,6 +30,8 @@ class _SearchScreenState extends State<SearchScreen> {
     _searchController.addListener(_runFilter);
   }
 
+  // ---------------- FETCH REPORTS ----------------
+
   Future<void> _fetchReports() async {
     try {
       final res = await supabase
@@ -40,19 +45,21 @@ class _SearchScreenState extends State<SearchScreen> {
         _filteredReports = _reports;
         _isLoading = false;
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('SEARCH FETCH ERROR: $e');
       setState(() => _isLoading = false);
     }
   }
 
-  // SEARCH
+  // ---------------- SEARCH ----------------
+
   void _runFilter() {
     final query = _searchController.text.toLowerCase();
 
     setState(() {
       _filteredReports = _reports.where((item) {
-        return item['title'].toString().toLowerCase().contains(query) || 
-               (item['brand'] ?? '')
+        return item['title'].toString().toLowerCase().contains(query) ||
+            (item['brand'] ?? '')
                 .toString()
                 .toLowerCase()
                 .contains(query);
@@ -60,21 +67,22 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
-  // VISUAL SEARCH
+  // ---------------- VISUAL SEARCH ----------------
+
   Future<void> _performVisualSearch() async {
-      final picker = ImagePicker();
-      final XFile? photo = await picker.pickImage(source: ImageSource.camera);
-      if (photo == null) return; 
+    final picker = ImagePicker();
+    final XFile? photo = await picker.pickImage(source: ImageSource.camera);
+    if (photo == null) return;
 
-      final inputImage = InputImage.fromFilePath(photo.path);
-      final labeler = ImageLabeler(
-        options: ImageLabelerOptions(confidenceThreshold: 0.5),
-      );
+    final inputImage = InputImage.fromFilePath(photo.path);
+    final labeler = ImageLabeler(
+      options: ImageLabelerOptions(confidenceThreshold: 0.5),
+    );
 
-      final labels = await labeler.processImage(inputImage);
-      labeler.close(); 
+    final labels = await labeler.processImage(inputImage);
+    labeler.close();
 
-      if (labels.isNotEmpty) {
+    if (labels.isNotEmpty) {
       setState(() {
         _searchController.text = labels.first.label;
       });
@@ -84,6 +92,8 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     }
   }
+
+  // ---------------- UI ----------------
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +116,9 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-Widget _buildSearchBar() {
+  // ---------------- SEARCH BAR ----------------
+
+  Widget _buildSearchBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -128,35 +140,25 @@ Widget _buildSearchBar() {
     );
   }
 
+  // ---------------- BANNER ----------------
+
   Widget _buildBanner() {
     return Column(
       children: [
-        Container(
-          width: double.infinity,
-          height: 140,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(15),
-            image: const DecorationImage(
-              image: NetworkImage(
-                'https://media.istockphoto.com/id/1582361888/photo/metallic-question-marks-illuminated-by-blue-and-pink-lights-on-blue-and-pink-background.jpg',
-              ),
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
         const SizedBox(height: 10),
         Center(
           child: Text(
             "What have you lost today?",
-            style: GoogleFonts.dancingScript(
+            style: GoogleFonts.deliciousHandrawn(
               fontSize: 24,
-              fontWeight: FontWeight.bold,
             ),
           ),
         ),
       ],
     );
   }
+
+  // ---------------- RESULTS ----------------
 
   Widget _buildResults() {
     if (_isLoading) {
@@ -182,16 +184,34 @@ Widget _buildSearchBar() {
       itemCount: _filteredReports.length,
       itemBuilder: (context, index) {
         final item = _filteredReports[index];
-        return _buildBelongingItem(
-          item['title'],
-          item['brand'] ?? 'Unknown',
-          item['image_url'],
+        final reportItem = ReportItem.fromMap(item);
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ItemDetailsScreen(item: reportItem),
+              ),
+            );
+          },
+          child: _buildBelongingItem(
+            reportItem.title,
+            reportItem.brand ?? 'Unknown',
+            reportItem.imageUrl,
+          ),
         );
       },
     );
   }
 
-  Widget _buildBelongingItem(String title, String brand, String? imageUrl) {
+  // ---------------- GRID ITEM ----------------
+
+  Widget _buildBelongingItem(
+    String title,
+    String brand,
+    String? imageUrl,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -199,23 +219,36 @@ Widget _buildSearchBar() {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(15),
+              color: Colors.grey.shade200,
               image: imageUrl != null
                   ? DecorationImage(
                       image: NetworkImage(imageUrl),
                       fit: BoxFit.cover,
                     )
                   : null,
-              color: Colors.grey.shade200,
             ),
             child: imageUrl == null
-                ? const Icon(Icons.image, color: Colors.grey)
+                ? const Center(
+                    child: Icon(
+                      Icons.image,
+                      size: 40,
+                      color: Colors.grey,
+                    ),
+                  )
                 : null,
           ),
         ),
         const SizedBox(height: 8),
-        Text(brand, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-        Text(title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(
+          brand,
+          style: const TextStyle(color: Colors.grey, fontSize: 12),
+        ),
+        Text(
+          title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
       ],
     );
   }

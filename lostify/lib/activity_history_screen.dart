@@ -1,8 +1,53 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'report_data.dart';
 
-class ActivityHistoryScreen extends StatelessWidget {
+class ActivityHistoryScreen extends StatefulWidget {
   const ActivityHistoryScreen({super.key});
+
+  @override
+  State<ActivityHistoryScreen> createState() => _ActivityHistoryScreenState();
+}
+
+class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
+  final supabase = Supabase.instance.client;
+
+  bool _isLoading = true;
+  List<ReportItem> _myReports = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMyReports();
+  }
+
+  // ---------------- FETCH USER REPORTS ----------------
+
+  Future<void> _fetchMyReports() async {
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+
+      final res = await supabase
+          .from('reports')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+
+      setState(() {
+        _myReports = res
+            .map<ReportItem>((e) => ReportItem.fromMap(e))
+            .toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('ACTIVITY FETCH ERROR: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // ---------------- UI ----------------
 
   @override
   Widget build(BuildContext context) {
@@ -21,18 +66,21 @@ class ActivityHistoryScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: globalReports.isEmpty
-          ? _buildEmptyState()
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: globalReports.length,
-              itemBuilder: (context, index) {
-                final item = globalReports[index];
-                return _buildHistoryItem(item);
-              },
-            ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _myReports.isEmpty
+              ? _buildEmptyState()
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _myReports.length,
+                  itemBuilder: (_, index) {
+                    return _buildHistoryItem(_myReports[index]);
+                  },
+                ),
     );
   }
+
+  // ---------------- EMPTY STATE ----------------
 
   Widget _buildEmptyState() {
     return Center(
@@ -42,9 +90,9 @@ class ActivityHistoryScreen extends StatelessWidget {
           Icon(Icons.history, size: 80, color: Colors.grey.shade300),
           const SizedBox(height: 20),
           const Text(
-            "There is no report",
+            "You have not made any reports yet",
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               color: Colors.grey,
               fontWeight: FontWeight.w500,
             ),
@@ -53,6 +101,8 @@ class ActivityHistoryScreen extends StatelessWidget {
       ),
     );
   }
+
+  // ---------------- HISTORY ITEM ----------------
 
   Widget _buildHistoryItem(ReportItem item) {
     return Container(
@@ -97,7 +147,7 @@ class ActivityHistoryScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // TITLE + STATUS
+                // TITLE + TYPE
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -116,7 +166,7 @@ class ActivityHistoryScreen extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: item.reportType == "lost"
+                        color: item.reportType == 'lost'
                             ? Colors.red.withOpacity(0.1)
                             : Colors.green.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -124,7 +174,7 @@ class ActivityHistoryScreen extends StatelessWidget {
                       child: Text(
                         item.reportType.toUpperCase(),
                         style: TextStyle(
-                          color: item.reportType == "lost"
+                          color: item.reportType == 'lost'
                               ? Colors.red
                               : Colors.green,
                           fontSize: 10,
@@ -140,21 +190,18 @@ class ActivityHistoryScreen extends StatelessWidget {
                 // BRAND
                 Text(
                   item.brand ?? "No brand",
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
 
                 // DESCRIPTION
                 Text(
                   item.description ?? "No description",
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
                 ),
 
                 const SizedBox(height: 8),
@@ -162,14 +209,15 @@ class ActivityHistoryScreen extends StatelessWidget {
                 // LOCATION + TIME
                 Row(
                   children: [
-                    const Icon(Icons.location_on, size: 12, color: Colors.grey),
+                    const Icon(Icons.location_on,
+                        size: 12, color: Colors.grey),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         item.location ?? "Unknown location",
                         style: const TextStyle(
-                          color: Colors.grey,
                           fontSize: 12,
+                          color: Colors.grey,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -177,8 +225,8 @@ class ActivityHistoryScreen extends StatelessWidget {
                     Text(
                       item.timeDescription ?? "",
                       style: const TextStyle(
-                        color: Colors.grey,
                         fontSize: 12,
+                        color: Colors.grey,
                       ),
                     ),
                   ],

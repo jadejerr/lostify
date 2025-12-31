@@ -5,7 +5,12 @@ import 'item_details_screen.dart';
 import 'report_data.dart';
 
 class NotificationScreen extends StatefulWidget {
-  const NotificationScreen({super.key});
+  final bool showBack;
+
+  const NotificationScreen({
+    super.key,
+    this.showBack = false,
+  });
 
   @override
   State<NotificationScreen> createState() => _NotificationScreenState();
@@ -27,16 +32,17 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchActiveFoundItems().then((_) => _buildMatchedItems());
+    _fetchActiveFoundItems();
     _fetchMyClaims();
   }
 
-  // FETCH FOUND ITEMS
+  // ---------------- FETCH FOUND ITEMS ----------------
+
   Future<void> _fetchActiveFoundItems() async {
     try {
       final res = await supabase
           .from('public_reports')
-          .select()
+          .select('*, profiles(full_name)')
           .eq('status', 'active')
           .eq('report_type', 'found')
           .order('created_at', ascending: false);
@@ -51,7 +57,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  // FETCH LOST ITEMS
+  // ---------------- FETCH MY LOST ITEMS ----------------
+
   Future<List<Map<String, dynamic>>> _fetchMyLostItems() async {
     final user = supabase.auth.currentUser;
     if (user == null) return [];
@@ -66,9 +73,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return List<Map<String, dynamic>>.from(res);
   }
 
-  // MATCHED ITEMS
+  // ---------------- BUILD MATCHED ITEMS ----------------
+
   Future<void> _buildMatchedItems() async {
+    setState(() => _isLoadingMatch = true);
+
     try {
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+
       final myLostItems = await _fetchMyLostItems();
       final foundItems = _activeFoundItems;
 
@@ -80,12 +93,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
         final lostWords = lostText.split(RegExp(r'\s+'));
 
         for (final found in foundItems) {
+          // ❌ Skip own found items
+          if (found['user_id'] == user.id) continue;
+
           final foundText =
               '${found['title']} ${found['brand'] ?? ''}'.toLowerCase();
-          final foundWords = foundText.split(RegExp(r'\s+'));
 
           final hasMatch = lostWords.any(
-            (w) => w.length > 2 && foundWords.contains(w),
+            (w) => w.length > 2 && foundText.contains(w),
           );
 
           if (hasMatch) {
@@ -109,7 +124,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  // FETCH CLAIMS
+  // ---------------- FETCH CLAIMS ----------------
+
   Future<void> _fetchMyClaims() async {
     try {
       final user = supabase.auth.currentUser;
@@ -131,6 +147,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
+  // ---------------- UI ----------------
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -142,7 +160,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: widget.showBack,
+        leading: widget.showBack
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
       ),
       body: Column(
         children: [
@@ -154,7 +178,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  // FILTER BUTTONS
+  // ---------------- FILTER BUTTONS ----------------
+
   Widget _buildFilters() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -174,7 +199,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget _buildFilterButton(String title) {
     final isSelected = _selectedFilter == title;
     return GestureDetector(
-      onTap: () => setState(() => _selectedFilter = title),
+      onTap: () {
+        setState(() => _selectedFilter = title);
+        if (title == "Match item") {
+          _buildMatchedItems();
+        }
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
@@ -193,7 +223,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  // NOTIFICATION TABS (FOUND, MATCH, CLAIM)
+  // ---------------- CONTENT SWITCH ----------------
+
   Widget _buildContent() {
     switch (_selectedFilter) {
       case "Found item":
@@ -207,7 +238,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  // FOUND ITEM
+  // ---------------- FOUND ITEMS ----------------
+
   Widget _buildFoundItemList() {
     if (_isLoadingFound) {
       return const Center(child: CircularProgressIndicator());
@@ -231,7 +263,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 ? Image.network(item['image_url'], width: 50, fit: BoxFit.cover)
                 : const Icon(Icons.image),
             title: Text(item['title']),
-            subtitle: Text(item['brand'] ?? 'Unknown'),
+            subtitle: Text(
+              'Found by ${item['profiles']?['full_name'] ?? 'Unknown'}',
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               Navigator.push(
@@ -247,7 +281,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  // MATCH ITEM
+  // ---------------- MATCH ITEMS ----------------
+
   Widget _buildMatchItemList() {
     if (_isLoadingMatch) {
       return const Center(child: CircularProgressIndicator());
@@ -285,7 +320,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           width: 50, fit: BoxFit.cover)
                       : const Icon(Icons.image),
                   title: Text(item['title']),
-                  subtitle: Text(item['brand'] ?? 'Unknown'),
+                  subtitle: Text(
+                    'Found by ${item['profiles']?['full_name'] ?? 'Unknown'}',
+                  ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.push(
@@ -304,7 +341,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  // CLAIM ITEM
+  // ---------------- CLAIM ITEMS ----------------
+
   Widget _buildClaimList() {
     if (_isLoadingClaims) {
       return const Center(child: CircularProgressIndicator());
@@ -359,7 +397,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  // HANDLE EMPTY STATE
+  // ---------------- EMPTY STATE ----------------
+
   Widget _buildEmptyState(String label) {
     return Center(
       child: Column(
