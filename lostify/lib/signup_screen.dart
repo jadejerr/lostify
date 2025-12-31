@@ -66,6 +66,7 @@ class _SignupScreenState extends State<SignupScreen> {
       await supabase.from('profiles').upsert({
         'id': user.id,
         'full_name': fullName,
+        'matric_number': matric,
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -80,7 +81,8 @@ class _SignupScreenState extends State<SignupScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Signup failed: $e")),
       );
-    } finally {
+    }
+    finally {
       setState(() => _isLoading = false);
     }
   }

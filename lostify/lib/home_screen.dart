@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'services/user_service.dart';
 import 'report_screen.dart';
 import 'search_screen.dart';
 import 'notification_screen.dart';
 import 'chat_screen.dart';
 import 'profile_screen.dart';
+import 'manage_item_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,18 +18,47 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  String _userRole = 'student';
+  bool _isLoadingRole = true;
 
-  List<Widget> get _screens => [
-    HomeTab(),
-    SearchScreen(),
-    ReportScreen(
-    key: ValueKey(
-      Supabase.instance.client.auth.currentUser?.id,
-    ),
-  ),
-    NotificationScreen(), 
-    ProfileScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadUserRole();
+  }
+
+  Future<void> _loadUserRole() async {
+  final role = await UserService.getUserRole();
+  setState(() {
+    _userRole = role;
+    _isLoadingRole = false;
+  });
+}
+
+  List<Widget> get _screens {
+    if (_userRole == 'staff') {
+      return [
+        const HomeTab(),
+        const SearchScreen(),
+        const ManageItemScreen(),
+        const NotificationScreen(),
+        const ProfileScreen(),
+      ];
+    }
+
+    // STUDENT
+    return [
+      const HomeTab(),
+      const SearchScreen(),
+      ReportScreen(
+        key: ValueKey(
+          Supabase.instance.client.auth.currentUser?.id,
+        ),
+      ),
+      const NotificationScreen(),
+      const ProfileScreen(),
+    ];
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -37,6 +68,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingRole) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       body: SafeArea(child: _screens[_selectedIndex]),
       bottomNavigationBar: BottomNavigationBar(
@@ -47,13 +83,21 @@ class _HomeScreenState extends State<HomeScreen> {
         unselectedItemColor: Colors.grey,
         showSelectedLabels: false,
         showUnselectedLabels: false,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.add_box_outlined), label: 'Report'),
-          BottomNavigationBarItem(icon: Icon(Icons.notifications_none), label: 'Notify'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-        ],
+        items: _userRole == 'staff'
+          ? const [
+              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+              BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+              BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: 'Manage'),
+              BottomNavigationBarItem(icon: Icon(Icons.notifications_none), label: 'Notify'),
+              BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+            ]
+          : const [
+              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+              BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+              BottomNavigationBarItem(icon: Icon(Icons.add_box_outlined), label: 'Report'),
+              BottomNavigationBarItem(icon: Icon(Icons.notifications_none), label: 'Notify'),
+              BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+            ],
       ),
     );
   }
@@ -91,9 +135,9 @@ class _HomeTabState extends State<HomeTab> {
       if (user == null) throw Exception("Not authenticated");
 
       final res = await supabase
-          .from('users')
+          .from('profiles')
           .select('full_name, matric_number')
-          .eq('user_id', user.id)
+          .eq('id', user.id)
           .single();
 
       setState(() {
@@ -101,8 +145,8 @@ class _HomeTabState extends State<HomeTab> {
         _matricNumber = res['matric_number'];
         _isLoadingUser = false;
       });
-
-    } catch (_) {
+    } catch (e) {
+      debugPrint('FETCH USER ERROR: $e');
       setState(() {
         _fullName = 'User';
         _isLoadingUser = false;

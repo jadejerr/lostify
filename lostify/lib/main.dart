@@ -111,13 +111,23 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await supabase
-          .from('users')
-          .select('email')
-          .eq('matric_number', matric)
-          .single();
+      String email;
 
-      final email = response['email'] as String;
+      try {
+        final res = await supabase
+            .from('users')
+            .select('email')
+            .eq('matric_number', matric)
+            .single();
+
+        email = res['email'];
+      } catch (_) {
+        if (matric.toLowerCase() == 'staff') {
+          email = 'staff@siswa.unimas.my';
+        } else {
+          throw Exception('User not found');
+        }
+      }
 
       await supabase.auth.signInWithPassword(
         email: email,
@@ -132,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       setState(() => _isLoading = false);
     }
-  }
+}
 
   @override
   Widget build(BuildContext context) {
