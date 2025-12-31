@@ -35,8 +35,7 @@ class _ReportScreenState extends State<ReportScreen> {
     _fetchMyReports();
   }
 
-  // ---------------- IMAGE PICKER ----------------
-
+  // IMAGE PICKER
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final XFile? xfile = await picker.pickImage(source: source);
@@ -75,8 +74,7 @@ class _ReportScreenState extends State<ReportScreen> {
     );
   }
 
-  // ---------------- IMAGE UPLOAD ----------------
-
+  // UPLOAD IMAGE
   Future<String?> _uploadImage(File image) async {
     final user = supabase.auth.currentUser;
     if (user == null) return null;
@@ -94,8 +92,7 @@ class _ReportScreenState extends State<ReportScreen> {
     return supabase.storage.from('report-images').getPublicUrl(fileName);
   }
 
-  // ---------------- MAP ----------------
-
+  // MAP
   Future<void> _openMap() async {
     final result = await Navigator.push(
       context,
@@ -106,8 +103,7 @@ class _ReportScreenState extends State<ReportScreen> {
     }
   }
 
-  // ---------------- FETCH MY REPORTS ----------------
-
+  // FETCH USER REPORT ACTIVITY
   Future<void> _fetchMyReports() async {
     try {
       final res = await supabase
@@ -125,8 +121,7 @@ class _ReportScreenState extends State<ReportScreen> {
     }
   }
 
-  // ---------------- SUBMIT REPORT ----------------
-
+  // SUBMIT REPORT (LOST/FOUND)
   Future<void> _submitReport() async {
     if (_itemController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -191,7 +186,74 @@ class _ReportScreenState extends State<ReportScreen> {
     setState(() => _selectedImage = null);
   }
 
-  // ---------------- UI ----------------
+ // EDIT REPORT
+  void _editReport(Map<String, dynamic> report) {
+    _itemController.text = report['title'] ?? '';
+    _brandController.text = report['brand'] ?? '';
+    _locationController.text = report['location'] ?? '';
+    _timeController.text = report['time_description'] ?? '';
+    _descController.text = report['description'] ?? '';
+    isLostItem = report['report_type'] == 'lost';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => Padding(
+        padding: MediaQuery.of(context).viewInsets,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Edit Report", style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              _buildTextField("Item", "", _itemController),
+              _buildTextField("Brand", "", _brandController),
+              _buildTextField("Description", "", _descController),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () async {
+                  await supabase.from('reports').update({
+                    'title': _itemController.text.trim(),
+                    'brand': _brandController.text.trim().isEmpty ? null : _brandController.text.trim(),
+                    'description': _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+                    'report_type': isLostItem ? 'lost' : 'found',
+                  }).eq('id', report['id']);
+
+                  Navigator.pop(context);
+                  _clearForm();
+                  await _fetchMyReports();
+                },
+                child: const Text("Save Changes"),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // DELETE REPORT
+  void _deleteReport(String reportId) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Delete Report"),
+        content: const Text("Are you sure you want to delete this report?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () async {
+              await supabase.from('reports').delete().eq('id', reportId);
+              Navigator.pop(context);
+              await _fetchMyReports();
+            },
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -257,10 +319,16 @@ class _ReportScreenState extends State<ReportScreen> {
       itemCount: _myReports.length,
       itemBuilder: (_, i) {
         final r = _myReports[i];
+
         return Card(
           child: ListTile(
             leading: r['image_url'] != null
-                ? Image.network(r['image_url'], width: 50, fit: BoxFit.cover)
+                ? Image.network(
+                    r['image_url'],
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                  )
                 : const Icon(Icons.image),
             title: Text(r['title']),
             subtitle: Text(
@@ -272,6 +340,16 @@ class _ReportScreenState extends State<ReportScreen> {
                     ? Colors.red
                     : Colors.green,
               ),
+            ),
+            trailing: PopupMenuButton(
+              onSelected: (value) {
+                if (value == 'edit') _editReport(r);
+                if (value == 'delete') _deleteReport(r['id']);
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'edit', child: Text("Edit")),
+                PopupMenuItem(value: 'delete', child: Text("Delete")),
+              ],
             ),
           ),
         );
