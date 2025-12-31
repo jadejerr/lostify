@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart'; 
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart'; 
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'item_list_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});

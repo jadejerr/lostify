@@ -210,6 +210,8 @@ class _ReportScreenState extends State<ReportScreen> {
               _buildTextField("Item", "", _itemController),
               _buildTextField("Brand", "", _brandController),
               _buildTextField("Description", "", _descController),
+              _buildTextField("Time", "", _timeController),
+              _buildLocationField(),
               const SizedBox(height: 10),
               ElevatedButton(
                 onPressed: () async {
@@ -217,6 +219,8 @@ class _ReportScreenState extends State<ReportScreen> {
                     'title': _itemController.text.trim(),
                     'brand': _brandController.text.trim().isEmpty ? null : _brandController.text.trim(),
                     'description': _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+                    'time_description': _timeController.text.trim().isEmpty ? null : _timeController.text.trim(),
+                    'location': _locationController.text.trim().isEmpty ? null : _locationController.text.trim(),
                     'report_type': isLostItem ? 'lost' : 'found',
                   }).eq('id', report['id']);
 
@@ -299,8 +303,6 @@ class _ReportScreenState extends State<ReportScreen> {
     );
   }
 
-  // ---------------- LIST ----------------
-
   Widget _buildMyReportsList() {
     if (_isLoadingReports) {
       return const Center(child: CircularProgressIndicator());
@@ -356,8 +358,6 @@ class _ReportScreenState extends State<ReportScreen> {
       },
     );
   }
-
-  // ---------------- SMALL WIDGETS ----------------
 
   Widget _buildToggle() {
     return Row(
