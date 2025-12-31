@@ -22,8 +22,7 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
     _fetchMyReports();
   }
 
-  // ---------------- FETCH USER REPORTS ----------------
-
+  // FETCH USER REPORT ACTIVITY
   Future<void> _fetchMyReports() async {
     try {
       final user = supabase.auth.currentUser;
@@ -46,8 +45,6 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
       setState(() => _isLoading = false);
     }
   }
-
-  // ---------------- UI ----------------
 
   @override
   Widget build(BuildContext context) {
@@ -80,8 +77,7 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
     );
   }
 
-  // ---------------- EMPTY STATE ----------------
-
+  // EMPTY STATE
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -102,8 +98,7 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
     );
   }
 
-  // ---------------- HISTORY ITEM ----------------
-
+  // ITEM HISTORY
   Widget _buildHistoryItem(ReportItem item) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),

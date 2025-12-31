@@ -36,14 +36,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
     _fetchMyClaims();
   }
 
-  // ---------------- FETCH FOUND ITEMS ----------------
-
+  // FETCH FOUND ITEM
   Future<void> _fetchActiveFoundItems() async {
     try {
       final res = await supabase
           .from('public_reports')
-          .select('*, profiles(full_name)')
-          .eq('status', 'active')
+          .select()
           .eq('report_type', 'found')
           .order('created_at', ascending: false);
 
@@ -57,8 +55,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  // ---------------- FETCH MY LOST ITEMS ----------------
-
+  // FETCH LOST ITEM
   Future<List<Map<String, dynamic>>> _fetchMyLostItems() async {
     final user = supabase.auth.currentUser;
     if (user == null) return [];
@@ -73,8 +70,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return List<Map<String, dynamic>>.from(res);
   }
 
-  // ---------------- BUILD MATCHED ITEMS ----------------
-
+  // MATCHED ITEM
   Future<void> _buildMatchedItems() async {
     setState(() => _isLoadingMatch = true);
 
@@ -93,7 +89,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
         final lostWords = lostText.split(RegExp(r'\s+'));
 
         for (final found in foundItems) {
-          // ❌ Skip own found items
           if (found['user_id'] == user.id) continue;
 
           final foundText =
@@ -109,7 +104,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
         }
       }
 
-      // REMOVE DUPLICATES
       final uniqueMatches = {
         for (var e in matches) e['id']: e
       }.values.toList();
@@ -124,8 +118,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  // ---------------- FETCH CLAIMS ----------------
-
+  // FETCH CLAIM
   Future<void> _fetchMyClaims() async {
     try {
       final user = supabase.auth.currentUser;
@@ -146,8 +139,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
       setState(() => _isLoadingClaims = false);
     }
   }
-
-  // ---------------- UI ----------------
 
   @override
   Widget build(BuildContext context) {
@@ -178,8 +169,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  // ---------------- FILTER BUTTONS ----------------
-
+  // FILTERS
   Widget _buildFilters() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -223,8 +213,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  // ---------------- CONTENT SWITCH ----------------
-
+  // TABS
   Widget _buildContent() {
     switch (_selectedFilter) {
       case "Found item":
@@ -238,8 +227,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  // ---------------- FOUND ITEMS ----------------
-
+  // FOUND ITEM
   Widget _buildFoundItemList() {
     if (_isLoadingFound) {
       return const Center(child: CircularProgressIndicator());
@@ -256,33 +244,44 @@ class _NotificationScreenState extends State<NotificationScreen> {
         final item = _activeFoundItems[index];
         final reportItem = ReportItem.fromMap(item);
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 15),
-          child: ListTile(
-            leading: item['image_url'] != null
-                ? Image.network(item['image_url'], width: 50, fit: BoxFit.cover)
-                : const Icon(Icons.image),
-            title: Text(item['title']),
-            subtitle: Text(
-              'Found by ${item['profiles']?['full_name'] ?? 'Unknown'}',
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ItemDetailsScreen(item: reportItem),
-                ),
-              );
-            },
+        return ListTile(
+          leading: CircleAvatar(
+            backgroundImage: item['matric_number'] != null
+                ? NetworkImage(
+                    'https://studentphotos.unimas.my/${item['matric_number']}.jpg',
+                  )
+                : null,
+            child: item['matric_number'] == null
+                ? const Icon(Icons.person)
+                : null,
           ),
+          title: Text(item['full_name'] ?? 'Unknown'),
+          subtitle: Text('Have found ${item['title']}'),
+          trailing: item['image_url'] != null
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.network(
+                    item['image_url'],
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              : const Icon(Icons.image),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ItemDetailsScreen(item: reportItem),
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  // ---------------- MATCH ITEMS ----------------
-
+  // MATCH ITEM
   Widget _buildMatchItemList() {
     if (_isLoadingMatch) {
       return const Center(child: CircularProgressIndicator());
@@ -293,7 +292,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // DISCLAIMER
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Text(
@@ -304,6 +305,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ),
           ),
         ),
+
+        // MATCH LIST
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -312,27 +315,39 @@ class _NotificationScreenState extends State<NotificationScreen> {
               final item = _matchedItems[index];
               final reportItem = ReportItem.fromMap(item);
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 15),
-                child: ListTile(
-                  leading: item['image_url'] != null
-                      ? Image.network(item['image_url'],
-                          width: 50, fit: BoxFit.cover)
-                      : const Icon(Icons.image),
-                  title: Text(item['title']),
-                  subtitle: Text(
-                    'Found by ${item['profiles']?['full_name'] ?? 'Unknown'}',
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ItemDetailsScreen(item: reportItem),
-                      ),
-                    );
-                  },
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundImage: item['matric_number'] != null
+                      ? NetworkImage(
+                          'https://studentphotos.unimas.my/${item['matric_number']}.jpg',
+                        )
+                      : null,
+                  child: item['matric_number'] == null
+                      ? const Icon(Icons.person)
+                      : null,
                 ),
+                title: Text(item['full_name'] ?? 'Unknown'),
+                subtitle: Text('Potential match: ${item['title']}'),
+                trailing: item['image_url'] != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.network(
+                          item['image_url'],
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : const Icon(Icons.image),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ItemDetailsScreen(item: reportItem),
+                    ),
+                  );
+                },
               );
             },
           ),
@@ -341,8 +356,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
-  // ---------------- CLAIM ITEMS ----------------
 
+  // CLAIM ITEM
   Widget _buildClaimList() {
     if (_isLoadingClaims) {
       return const Center(child: CircularProgressIndicator());
@@ -364,51 +379,29 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ReportItem.fromMap(Map<String, dynamic>.from(report));
         final status = claim['status'];
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 15),
-          child: ListTile(
-            leading: report['image_url'] != null
-                ? Image.network(report['image_url'], width: 50, fit: BoxFit.cover)
-                : const Icon(Icons.image),
-            title: Text(report['title']),
-            subtitle: Text(
-              'Status: ${status.toUpperCase()}',
-              style: TextStyle(
-                color: status == 'approved'
-                    ? Colors.green
-                    : status == 'rejected'
-                        ? Colors.red
-                        : Colors.orange,
-                fontWeight: FontWeight.bold,
+        return ListTile(
+          title: Text(report['title']),
+          subtitle: Text('Status: ${status.toUpperCase()}'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ItemDetailsScreen(item: reportItem),
               ),
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ItemDetailsScreen(item: reportItem),
-                ),
-              );
-            },
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  // ---------------- EMPTY STATE ----------------
-
+  // EMPTY STATE
   Widget _buildEmptyState(String label) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.notifications_none,
-              size: 60, color: Colors.grey.shade300),
-          const SizedBox(height: 10),
-          Text("No $label yet", style: const TextStyle(color: Colors.grey)),
-        ],
+      child: Text(
+        'No $label yet',
+        style: const TextStyle(color: Colors.grey),
       ),
     );
   }

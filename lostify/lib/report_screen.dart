@@ -45,8 +45,7 @@ class _ReportScreenState extends State<ReportScreen> {
     _fetchMyReports();
   }
 
-  // ---------------- PREFILL FROM CHATBOT ----------------
-
+  // PREFILL FROM CHATBOT
   void _applyPrefillIfAny() {
     final data = widget.prefillData;
     if (data == null) return;
@@ -61,8 +60,7 @@ class _ReportScreenState extends State<ReportScreen> {
     }
   }
 
-  // ---------------- IMAGE PICKER ----------------
-
+  // IMAGE PICKER
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final XFile? xfile = await picker.pickImage(source: source);
@@ -101,8 +99,7 @@ class _ReportScreenState extends State<ReportScreen> {
     );
   }
 
-  // ---------------- IMAGE UPLOAD ----------------
-
+  // UPLOAD IMAGE
   Future<String?> _uploadImage(File image) async {
     final user = supabase.auth.currentUser;
     if (user == null) return null;
@@ -120,8 +117,7 @@ class _ReportScreenState extends State<ReportScreen> {
     return supabase.storage.from('report-images').getPublicUrl(fileName);
   }
 
-  // ---------------- MAP ----------------
-
+  // MAP
   Future<void> _openMap() async {
     final result = await Navigator.push(
       context,
@@ -132,8 +128,7 @@ class _ReportScreenState extends State<ReportScreen> {
     }
   }
 
-  // ---------------- FETCH MY REPORTS ----------------
-
+  // FETCH REPORT
   Future<void> _fetchMyReports() async {
     try {
       final user = supabase.auth.currentUser;
@@ -155,8 +150,7 @@ class _ReportScreenState extends State<ReportScreen> {
     }
   }
 
-  // ---------------- SUBMIT REPORT ----------------
-
+  // SUBMIT REPORT
   Future<void> _submitReport() async {
     if (_itemController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -221,8 +215,6 @@ class _ReportScreenState extends State<ReportScreen> {
     setState(() => _selectedImage = null);
   }
 
-  // ---------------- UI ----------------
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -272,8 +264,6 @@ class _ReportScreenState extends State<ReportScreen> {
       ),
     );
   }
-
-  // ---------------- UI HELPERS ----------------
 
   Widget _buildMyReportsList() {
     if (_isLoadingReports) {

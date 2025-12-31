@@ -36,8 +36,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _showIntentOptions();
   }
 
-  // ---------------- CHAT HELPERS ----------------
-
   void _bot(String text) {
     setState(() {
       _messages.add(_ChatMessage(text, false));
@@ -54,8 +52,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _bot("Please choose one option below 👇");
   }
 
-  // ---------------- INTENT SELECTION ----------------
-
+  // SELECT INTENT
   void _selectIntent(ChatIntent intent) {
     setState(() {
       _intent = intent;
@@ -69,8 +66,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // ---------------- WIT.AI ----------------
-
+  // WIT.AI
   Future<Map<String, String>> _extractEntities(String text) async {
     final url =
         Uri.parse('https://api.wit.ai/message?v=20240101&q=$text');
@@ -96,8 +92,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return entities;
   }
 
-  // ---------------- MESSAGE SEND ----------------
-
+  // SEND MESSAGE
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
@@ -120,8 +115,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // ---------------- LOST FLOW ----------------
-
+  // LOST ITEM FLOW
   Future<void> _handleLostFlow(Map<String, String> entities) async {
     final keyword =
         entities['item_type'] ?? entities['item_brand'] ?? entities['colour'];
@@ -170,8 +164,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _awaitingDescription = false;
   }
 
-  // ---------------- FOUND FLOW ----------------
-
+  // FOUND ITEM FLOW
   void _handleFoundFlow(Map<String, String> entities) {
     _bot("Thanks! Please confirm to submit this found item report.");
 
@@ -191,8 +184,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _awaitingDescription = false;
   }
 
-  // ---------------- RESET ----------------
-
+  // RESET CHAT
   void _resetChat() {
     setState(() {
       _messages.clear();
@@ -203,8 +195,6 @@ class _ChatScreenState extends State<ChatScreen> {
     _bot("Hello 👋 What can I help you with today?");
     _showIntentOptions();
   }
-
-  // ---------------- UI ----------------
 
   @override
   Widget build(BuildContext context) {
@@ -332,8 +322,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 }
-
-// ---------------- MODELS ----------------
 
 enum _ChatAction { viewMatches }
 
