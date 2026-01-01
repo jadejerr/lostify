@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ManageItemScreen extends StatefulWidget {
   const ManageItemScreen({super.key});
@@ -8,160 +9,125 @@ class ManageItemScreen extends StatefulWidget {
 }
 
 class _ManageItemScreenState extends State<ManageItemScreen> {
-  bool _isLoading = false;
+  final supabase = Supabase.instance.client;
+
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _claims = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchClaims();
+  }
+
+  // FETCH CLAIMS
+  Future<void> _fetchClaims() async {
+    try {
+      final res = await supabase
+          .from('claims')
+          .select('''
+            id,
+            status,
+            created_at,
+            public_reports (
+              id,
+              title,
+              image_url
+            ),
+            profiles!claims_requester_id_fkey (
+              id,
+              full_name,
+              matric_number
+            )
+          ''')
+          .order('created_at', ascending: false);
+
+      debugPrint('RAW CLAIMS RESULT: $res');
+
+      setState(() {
+        _claims = List<Map<String, dynamic>>.from(res);
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('MANAGE CLAIM FETCH ERROR: $e');
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
-          "Manage Claims",
+          'Manage Claims',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _buildContent(),
+          : _claims.isEmpty
+              ? const Center(child: Text('No claims found'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _claims.length,
+                  itemBuilder: (context, index) {
+                    final claim = _claims[index];
+                    final report = claim['public_reports'];
+                    final profile = claim['profiles'];
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        leading: report?['image_url'] != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: Image.network(
+                                  report['image_url'],
+                                  width: 50,
+                                  height: 50,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : const Icon(Icons.inventory),
+                        title: Text(
+                          report?['title'] ?? 'Unknown item',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'Claimed by ${profile?['full_name'] ?? 'Unknown'}\n'
+                          'Status: ${claim['status']}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        isThreeLine: true,
+                        trailing: _buildStatusBadge(claim['status']),
+                      ),
+                    );
+                  },
+                ),
     );
   }
 
-  Widget _buildContent() {
-    // TEMP static UI — will be replaced by Supabase data later
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 3, // dummy count
-      itemBuilder: (context, index) {
-        return _buildClaimCard();
-      },
-    );
-  }
+  // STATUS BADGE
+  Widget _buildStatusBadge(String status) {
+    Color color;
+    switch (status) {
+      case 'approved':
+        color = Colors.green;
+        break;
+      case 'rejected':
+        color = Colors.red;
+        break;
+      default:
+        color = Colors.orange;
+    }
 
-  Widget _buildClaimCard() {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // USER INFO
-            Row(
-              children: [
-                const CircleAvatar(
-                  radius: 22,
-                  child: Icon(Icons.person),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        "Student Name",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        "Matric No: 123456",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // ITEM INFO
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.image),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          "Item Name",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          "Claimed item description goes here",
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // ACTION BUTTONS
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      // TODO: Reject claim
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                    ),
-                    child: const Text("Reject"),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: Approve claim
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                    ),
-                    child: const Text("Approve"),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+    return Text(
+      status.toUpperCase(),
+      style: TextStyle(
+        color: color,
+        fontWeight: FontWeight.bold,
+        fontSize: 12,
       ),
     );
   }

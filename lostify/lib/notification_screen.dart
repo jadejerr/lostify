@@ -127,7 +127,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       final res = await supabase
           .from('claims')
           .select('status, reports(*)')
-          .eq('claimer_id', user.id)
+          .eq('requester_id', user.id)
           .order('created_at', ascending: false);
 
       setState(() {
