@@ -125,10 +125,25 @@ class _NotificationScreenState extends State<NotificationScreen> {
       if (user == null) return;
 
       final res = await supabase
-          .from('claims')
-          .select('status, reports(*)')
-          .eq('requester_id', user.id)
-          .order('created_at', ascending: false);
+        .from('claims')
+        .select('''
+          id,
+          report_id,
+          status,
+          created_at,
+          public_reports (
+            id,
+            title,
+            image_url
+          ),
+          profiles!claims_requester_id_fkey (
+            id,
+            full_name,
+            matric_number
+          )
+        ''')
+        .eq('requester_id', user.id)
+        .order('created_at', ascending: false);
 
       setState(() {
         _myClaims = List<Map<String, dynamic>>.from(res);
@@ -372,7 +387,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       itemCount: _myClaims.length,
       itemBuilder: (_, index) {
         final claim = _myClaims[index];
-        final report = claim['reports'];
+        final report = claim['public_reports'];
         if (report == null) return const SizedBox();
 
         final reportItem =
