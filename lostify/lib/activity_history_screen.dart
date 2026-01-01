@@ -163,15 +163,23 @@ class _ActivityHistoryScreenState extends State<ActivityHistoryScreen> {
                       decoration: BoxDecoration(
                         color: item.reportType == 'lost'
                             ? Colors.red.withOpacity(0.1)
-                            : Colors.green.withOpacity(0.1),
+                            : item.status == 'active'
+                                  ? Colors.green.withOpacity(0.1)
+                                  : Colors.grey.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        item.reportType.toUpperCase(),
+                        item.reportType == "lost"
+                            ? "LOST"
+                            : item.status == "active"
+                                ? "FOUND"
+                                : "CLAIMED",
                         style: TextStyle(
                           color: item.reportType == 'lost'
                               ? Colors.red
-                              : Colors.green,
+                              : item.status == 'active'
+                                  ? Colors.green
+                                  : Colors.grey,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
