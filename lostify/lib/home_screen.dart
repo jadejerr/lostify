@@ -9,6 +9,7 @@ import 'notification_screen.dart';
 import 'chat_screen.dart';
 import 'profile_screen.dart';
 import 'manage_item_screen.dart';
+import 'staff_report_tabs_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,31 +37,19 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  List<Widget> get _screens {
-    // STAFF
-    if (_userRole == 'staff') {
-      return [
-        const HomeTab(),
-        const SearchScreen(),
-        const ManageItemScreen(),
-        const NotificationScreen(),
-        const ProfileScreen(),
-      ];
-    }
+  List<Widget> get _screens => [
+    HomeTab(),
+    SearchScreen(),
 
-    // STUDENT
-    return [
-      const HomeTab(),
-      const SearchScreen(),
-      ReportScreen(
-        key: ValueKey(
-          Supabase.instance.client.auth.currentUser?.id,
-        ),
-      ),
-      const NotificationScreen(),
-      const ProfileScreen(),
-    ];
-  }
+    // REPORT TAB
+    _userRole == 'staff'
+        ? const StaffReportTabsScreen()
+        : const ReportScreen(),
+
+    NotificationScreen(),
+    ProfileScreen(),
+  ];
+
 
   void _onItemTapped(int index) {
     setState(() {
