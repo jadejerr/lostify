@@ -35,9 +35,8 @@ class _SearchScreenState extends State<SearchScreen> {
   Future<void> _fetchReports() async {
     try {
       final res = await supabase
-          .from('public_reports')
+          .from('staff_reports')
           .select()
-          .eq('status', 'active')
           .order('created_at', ascending: false);
 
       setState(() {
