@@ -27,6 +27,7 @@ class _ManageItemScreenState extends State<ManageItemScreen> {
           .from('claims')
           .select('''
             id,
+            report_id,
             status,
             created_at,
             public_reports (
@@ -41,8 +42,6 @@ class _ManageItemScreenState extends State<ManageItemScreen> {
             )
           ''')
           .order('created_at', ascending: false);
-
-      debugPrint('RAW CLAIMS RESULT: $res');
 
       setState(() {
         _claims = List<Map<String, dynamic>>.from(res);
@@ -100,7 +99,9 @@ class _ManageItemScreenState extends State<ManageItemScreen> {
                           style: const TextStyle(fontSize: 12),
                         ),
                         isThreeLine: true,
-                        trailing: _buildStatusBadge(claim['status']),
+                        trailing: claim['status'] == 'pending'
+                          ? _buildActionButtons(claim)
+                          : _buildStatusBadge(claim['status']),
                       ),
                     );
                   },
@@ -130,5 +131,70 @@ class _ManageItemScreenState extends State<ManageItemScreen> {
         fontSize: 12,
       ),
     );
+  }
+
+  // UPDATE CLAIM STATUS BUTTON
+  Widget _buildActionButtons(Map<String, dynamic> claim) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.check_circle, color: Colors.green),
+          tooltip: 'Approve',
+          onPressed: () => _updateClaimStatus(claim['report_id'], claim['id'], 'approved'),
+        ),
+        IconButton(
+          icon: const Icon(Icons.cancel, color: Colors.red),
+          tooltip: 'Reject',
+          onPressed: () => _updateClaimStatus(claim['report_id'], claim['id'], 'rejected'),
+        ),
+      ],
+    );
+  }
+
+  // UPDATE CLAIM STATUS
+  Future<void> _updateClaimStatus(String reportId, String claimId, String newStatus) async {
+    try {
+      await supabase
+          .from('claims')
+          .update({'status': newStatus})
+          .eq('id', claimId);
+
+      await _updateReportStatus(reportId, newStatus);
+      debugPrint('========  DONE UPDATE REPORT STATUS ==========');
+      await _fetchClaims();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Claim $newStatus')),
+      );
+    } catch (e) {
+      debugPrint('UPDATE CLAIM ERROR: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update claim')),
+      );
+    }
+  }
+
+  // UPDATE REPORT STATUS
+  Future<void> _updateReportStatus(String reportId, String newStatus) async {
+    try {
+        if (newStatus == 'approved') {
+          await supabase
+              .from('reports')
+              .update({'status': 'claimed'})
+              .eq('id', reportId);
+        }
+
+      debugPrint('Report ID: $reportId');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Report status updated')),
+      );
+    } catch (e) {
+      debugPrint('UPDATE REPORT ERROR: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update report')),
+      );
+    }
   }
 }
