@@ -152,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image: NetworkImage('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80'),
+                image: NetworkImage('https://www.feb.unimas.my/images/2020/07/17/whatsapp-image-2020-07-17-at-12.25.29.jpeg'),
                 fit: BoxFit.cover,
                 colorFilter: ColorFilter.mode(Colors.black54, BlendMode.darken),
               ),
@@ -165,23 +165,19 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(15),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.2),
-                    ),
-                    child: const Icon(Icons.school, size: 60, color: Colors.white),
-                  ),
-                  const SizedBox(height: 20),
+                  CircleAvatar(
+              radius: 50,
+              backgroundImage:  NetworkImage('https://upload.wikimedia.org/wikipedia/en/thumb/6/67/UNIMAS.svg/500px-UNIMAS.svg.png')
+            ),
+            const SizedBox(height: 15),
                   
                   const Text(
-                    "Welcome Back",
+                    "Welcome",
                     style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                   const Text(
                     "Sign in to continue to Lostify",
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(color: Colors.white),
                   ),
                   const SizedBox(height: 40),
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'services/user_service.dart';
 import 'activity_history_screen.dart'; 
 import 'help_support_screen.dart';
 
@@ -16,11 +17,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Map<String, dynamic>? _profile;
   bool _isLoading = true;
+  String? _userRole;
 
   @override
   void initState() {
     super.initState();
     _fetchProfile();
+    _loadUserRole();
   }
 
   Future<void> _fetchProfile() async {
@@ -50,6 +53,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _loadUserRole() async {
+    final role = await UserService.getUserRole();
+    setState(() {
+      _userRole = role;
+    });
+  }
+
   Future<void> _logout() async {
     await Supabase.instance.client.auth.signOut();
     await Future.delayed(const Duration(milliseconds: 300));
@@ -67,7 +77,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final fullName = _profile?['full_name'] ?? '—';
     final email = _profile?['email'] ?? '—';
     final matric = _profile?['matric_number'] ?? '—';
-    final role = _profile?['role'] ?? 'student';
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -90,9 +99,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             CircleAvatar(
               radius: 50,
               backgroundImage: !_isLoading && matric != null
-                ? NetworkImage(
-                  'https://studentphotos.unimas.my/$matric.jpg',
-                  )
+                ? _userRole == 'staff'
+                    ? NetworkImage('https://upload.wikimedia.org/wikipedia/en/thumb/6/67/UNIMAS.svg/500px-UNIMAS.svg.png')
+                    : NetworkImage('https://studentphotos.unimas.my/$matric.jpg')
                 : null,
                 child: _isLoading || matric == null
                     ? const Icon(Icons.person, color: Colors.grey)
@@ -158,7 +167,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       Text(
-                        role.toString().toUpperCase(),
+                        _userRole == 'staff' ? 'Staff' : 'Student',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,

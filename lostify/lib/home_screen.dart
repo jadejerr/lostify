@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'services/user_service.dart';
@@ -28,14 +29,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadUserRole() async {
-  final role = await UserService.getUserRole();
-  setState(() {
-    _userRole = role;
-    _isLoadingRole = false;
-  });
-}
+    final role = await UserService.getUserRole();
+    setState(() {
+      _userRole = role;
+      _isLoadingRole = false;
+    });
+  }
 
   List<Widget> get _screens {
+    // STAFF
     if (_userRole == 'staff') {
       return [
         const HomeTab(),
@@ -115,6 +117,7 @@ class _HomeTabState extends State<HomeTab> {
 
   String? _fullName;
   String? _matricNumber;
+  String? _userRole;
 
   bool _isLoadingUser = true;
   bool _isLoadingReports = true;
@@ -125,6 +128,7 @@ class _HomeTabState extends State<HomeTab> {
   void initState() {
     super.initState();
     _fetchUser();
+    _loadUserRole();
     _fetchReports(); 
   }
 
@@ -152,6 +156,14 @@ class _HomeTabState extends State<HomeTab> {
         _isLoadingUser = false;
       });
     }
+  }
+
+  // USER ROLE
+  Future<void> _loadUserRole() async {
+    final role = await UserService.getUserRole();
+    setState(() {
+      _userRole = role;
+    });
   }
 
   // REPORTS
@@ -183,7 +195,10 @@ class _HomeTabState extends State<HomeTab> {
             const SizedBox(height: 10),
             _buildHeader(),
             const SizedBox(height: 20),
-            const Text("Your Report Activity",
+            Text(
+              _userRole == 'staff'
+                ? "Lostify Report Activity"
+                : "Your Report Activity",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             _buildReportList(),
@@ -197,9 +212,9 @@ class _HomeTabState extends State<HomeTab> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         const SizedBox(width: 40),
-        const Text(
-          "Lostify",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        Text(
+          "L O S T I F Y",
+          style: GoogleFonts.deliciousHandrawn(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         IconButton(
           icon: const Icon(Icons.smart_toy_outlined, color: Colors.blue),
@@ -220,8 +235,9 @@ class _HomeTabState extends State<HomeTab> {
           CircleAvatar(
             radius: 30,
             backgroundImage: !_isLoadingUser && _matricNumber != null
-                ? NetworkImage(
-                    'https://studentphotos.unimas.my/$_matricNumber.jpg')
+                ? _userRole == 'staff'
+                    ? NetworkImage('https://upload.wikimedia.org/wikipedia/en/thumb/6/67/UNIMAS.svg/500px-UNIMAS.svg.png')
+                    : NetworkImage('https://studentphotos.unimas.my/$_matricNumber.jpg')
                 : null,
             child: _isLoadingUser || _matricNumber == null
                 ? const Icon(Icons.person, color: Colors.grey)
@@ -240,7 +256,11 @@ class _HomeTabState extends State<HomeTab> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _isLoadingUser ? "Welcome…" : "Welcome $_fullName",
+                    _isLoadingUser
+                      ? "Welcome…"
+                      : _userRole == 'staff'
+                          ? "Staff Dashboard"
+                          : "Welcome, $_fullName",
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
@@ -250,7 +270,10 @@ class _HomeTabState extends State<HomeTab> {
                         : "${_reports.length} reports currently active.",
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  const Text("Stay safe!",
+                  Text(
+                    _userRole == 'staff'
+                      ? "Manage reported items efficiently."
+                      : "Keep track of your reports.",
                       style: TextStyle(fontSize: 12, color: Colors.grey)),
                 ],
               ),
