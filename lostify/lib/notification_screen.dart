@@ -131,7 +131,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           report_id,
           status,
           created_at,
-          public_reports (
+          staff_reports (
             id,
             title,
             image_url
@@ -387,7 +387,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       itemCount: _myClaims.length,
       itemBuilder: (_, index) {
         final claim = _myClaims[index];
-        final report = claim['public_reports'];
+        final report = claim['staff_reports'];
         if (report == null) return const SizedBox();
 
         final reportItem =
