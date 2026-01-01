@@ -30,7 +30,7 @@ class _ManageItemScreenState extends State<ManageItemScreen> {
             report_id,
             status,
             created_at,
-            public_reports (
+            staff_reports (
               id,
               title,
               image_url
@@ -72,7 +72,7 @@ class _ManageItemScreenState extends State<ManageItemScreen> {
                   itemCount: _claims.length,
                   itemBuilder: (context, index) {
                     final claim = _claims[index];
-                    final report = claim['public_reports'];
+                    final report = claim['staff_reports'];
                     final profile = claim['profiles'];
 
                     return Card(
@@ -161,7 +161,6 @@ class _ManageItemScreenState extends State<ManageItemScreen> {
           .eq('id', claimId);
 
       await _updateReportStatus(reportId, newStatus);
-      debugPrint('========  DONE UPDATE REPORT STATUS ==========');
       await _fetchClaims();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -184,8 +183,6 @@ class _ManageItemScreenState extends State<ManageItemScreen> {
               .update({'status': 'claimed'})
               .eq('id', reportId);
         }
-
-      debugPrint('Report ID: $reportId');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Report status updated')),
